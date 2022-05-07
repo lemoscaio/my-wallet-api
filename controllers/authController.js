@@ -68,7 +68,7 @@ export async function signInUser(req, res) {
     try {
         await userSchema.validateAsync(req.body)
     } catch (e) {
-        return res.send(e.details.map((error) => error.message))
+        return res.status(400).send(e.details.map((error) => error.message))
     }
 
     try {

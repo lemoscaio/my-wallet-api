@@ -13,6 +13,9 @@ app.use(express.json())
 
 app.use(authRouter)
 app.use(statmentsRouter)
+app.get("/", (req,res) => {
+    res.send("Online")
+})
 
 app.listen(process.env.PORT || 5000, () => {
     console.log(`Server running on port ${process.env.PORT || 5000}`)

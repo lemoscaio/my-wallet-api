@@ -5,14 +5,16 @@ import database from "../database.js"
 export async function getStatements(req, res) {
     const { user } = res.locals
 
-    const statements = await database
-        .collection("statements")
-        .find({ userId: user._id })
-        .toArray()
+    try {
+        const statements = await database
+            .collection("statements")
+            .find({ userId: user._id })
+            .toArray()
 
-    console.log(statements)
-
-    res.send(statements)
+        res.send(statements)
+    } catch (error) {
+        return res.status(500).send(error)
+    }
 }
 
 export async function postNewStatementEntry(req, res) {
@@ -21,7 +23,22 @@ export async function postNewStatementEntry(req, res) {
     const { description, value, type } = req.body
     // TODO insert time when posting
 
-    const newEntry = { userId: user._id, description, value, type }
+    const trimmedDescription = description?.trim()
+
+    const valueAsNumber = parseFloat(value).toFixed(2)
+
+    if (valueAsNumber <= 0.0)
+        return res.status(400).send("Value must be higher than 0.00")
+
+    const descriptionContent =
+        trimmedDescription.length > 0 ? trimmedDescription : "Sem descrição"
+
+    const newEntry = {
+        userId: user._id,
+        description: descriptionContent,
+        value: valueAsNumber,
+        type,
+    }
 
     try {
         const result = await database
@@ -30,52 +47,98 @@ export async function postNewStatementEntry(req, res) {
 
         if (result.acknowledged) return res.status(201).send(newEntry)
     } catch (error) {
-        return res.status(500).send("Couldn't insert new entry")
+        return res.status(500).send(error)
     }
 }
 
 export async function deleteStatementEntry(req, res) {
     const { entryId } = req.params
+    const { user } = res.locals
+
+    if (!ObjectId.isValid(entryId))
+        return res.status(400).send("Invalid statement ID pattern") //WORKING
 
     try {
-        const result = await database
+        const statement = await database
             .collection("statements")
-            .findOneAndDelete({ _id: new ObjectId(entryId) })
+            .findOne({ _id: new ObjectId(entryId) })
 
-        if (!result.value) return res.status(404).send("Entry doesn't exist")
-        else return res.sendStatus(200)
+        if (!statement) return res.status(404).send("Entry not found") //WORKING
+
+        const userIdFromStatement = statement.userId.toString()
+        const userIdFromSession = user._id.toString()
+
+        if (userIdFromStatement !== userIdFromSession)
+            return res.status(401).send("This entry doesn't belong to the user") //WORKING
+
+        try {
+            const result = await database
+                .collection("statements")
+                .deleteOne({ _id: new ObjectId(entryId) })
+
+            if (result.deletedCount > 0)
+                return res.status(200).send("Successfully deleted") // WORKING
+            else return res.status(400).send("Couldn't delete statement")
+        } catch (error) {
+            return res.status(500).send(error)
+        }
     } catch (error) {
-        console.log(error)
-        return res.sendStatus(500)
+        return res.status(500).send(error)
     }
 }
 
 export async function editStatementEntry(req, res) {
     const { entryId } = req.params
     const { description, value, type } = req.body
+    const { user } = res.locals
 
-    const entry = await database
-        .collection("statements")
-        .findOne({ _id: new ObjectId(entryId) })
+    const trimmedDescription = description?.trim()
 
-    if (!entry) return res.status(404).send("Entry doesn't exist")
+    const valueAsNumber = parseFloat(value).toFixed(2)
+
+    if (valueAsNumber <= 0.0)
+        return res.status(400).send("Value must be higher than 0.00")
+
+    const descriptionContent =
+        trimmedDescription.length > 0 ? trimmedDescription : "Sem descrição"
+
+    const editedEntry = {
+        description: descriptionContent,
+        value: valueAsNumber,
+        type,
+    }
+
+    if (!ObjectId.isValid(entryId))
+        return res.status(400).send("Invalid statement ID pattern") // WORKING
 
     try {
-        const result = await database
+        const statement = await database
             .collection("statements")
-            .updateOne(
-                { _id: entry._id },
-                { $set: { description, value, type } }
-            )
-        console.log(result)
+            .findOne({ _id: new ObjectId(entryId) })
 
-        if (result.modifiedCount === 1 && result.matchedCount === 1)
-            return res.sendStatus(200)
-        else if (result.matchedCount === 1 && result.modifiedCount === 0)
-            return res.status(400).send("Data must be different to update")
-        else return res.sendStatus(400)
+        if (!statement) return res.status(404).send("Entry not found") // WORKING
+
+        const userIdFromStatement = statement.userId.toString()
+        const userIdFromSession = user._id.toString()
+
+        if (userIdFromStatement !== userIdFromSession)
+            return res.status(401).send("This entry doesn't belong to the user") // WORKING
+
+        try {
+            const result = await database
+                .collection("statements")
+                .updateOne({ _id: statement._id }, { $set: editedEntry })
+
+            if (result.modifiedCount === 1 && result.matchedCount === 1)
+                return res.status(200).send("Successfully updated") // WORKING
+            else if (result.matchedCount === 1 && result.modifiedCount === 0)
+                return res.status(400).send("Data must be different to update")
+            // WORKING
+            else return res.sendStatus(400)
+        } catch (error) {
+            return res.status(500).send(error)
+        }
     } catch (error) {
-        console.log(error)
-        return res.sendStatus(500)
+        return res.status(500).send(error)
     }
 }

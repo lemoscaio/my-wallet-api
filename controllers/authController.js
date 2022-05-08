@@ -1,36 +1,14 @@
 import bcrypt from "bcrypt"
 import { passwordStrength } from "check-password-strength"
-import Joi from "joi"
+
 import { v4 as uuid } from "uuid"
 
 import database from "./../database.js"
 
-const newUserSchema = Joi.object({
-    name: Joi.string()
-        .pattern(/^[a-zA-ZãÃÇ-Üá-ú ]*$/i)
-        .required(),
-    email: Joi.string().email().required(),
-    password: Joi.string()
-        .pattern(/^\S{6,20}$/)
-        .required(),
-})
 
-const userSchema = Joi.object({
-    email: Joi.string().email().required(),
-    password: Joi.string()
-        .pattern(/^\S{6,20}$/)
-        .required(),
-})
 
 export async function registerUser(req, res) {
     const { name, email, password } = req.body
-
-    try {
-        await newUserSchema.validateAsync(req.body, { abortEarly: false })
-    } catch (e) {
-        res.status(400).send(e.details.map((error) => error.message))
-        return
-    }
 
     try {
         const user = await database
@@ -66,12 +44,6 @@ export async function signInUser(req, res) {
     const { email, password } = req.body
 
     try {
-        await userSchema.validateAsync(req.body)
-    } catch (e) {
-        return res.status(400).send(e.details.map((error) => error.message))
-    }
-
-    try {
         const user = await database.collection("users").findOne({ email })
         const isPasswordRight = bcrypt.compareSync(password, user.password)
 
@@ -85,7 +57,7 @@ export async function signInUser(req, res) {
                 .collection("sessions")
                 .insertOne({ userId: user._id, token })
 
-            return res.send(token)
+            return res.send({ name: user.name, token })
         } catch (e) {
             console.log(e)
 

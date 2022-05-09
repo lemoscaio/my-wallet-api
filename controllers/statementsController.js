@@ -9,7 +9,7 @@ export async function getStatements(req, res) {
     try {
         const statements = await database
             .collection("statements")
-            .find({ userId: user._id })
+            .find({ userId: user._id }, { sort: { $natural: -1 } })
             .toArray()
 
         res.send(statements)

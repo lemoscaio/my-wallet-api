@@ -5,8 +5,6 @@ import { v4 as uuid } from "uuid"
 
 import database from "./../database.js"
 
-
-
 export async function registerUser(req, res) {
     const { name, email, password } = req.body
 
@@ -64,6 +62,6 @@ export async function signInUser(req, res) {
             return res.status(500).send("Couldn't add session")
         }
     } catch (e) {
-        return res.sendStatus(401)
+        return res.status(401).send("Wrong e-mail or password")
     }
 }

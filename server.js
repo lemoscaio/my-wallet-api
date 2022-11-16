@@ -4,7 +4,7 @@ import dotenv from "dotenv"
 dotenv.config()
 
 import authRouter from "./routes/authRouter.js"
-import statmentsRouter from "./routes/statementsRouter.js"
+import statementsRouter from "./routes/statementsRouter.js"
 
 const app = express()
 
@@ -12,8 +12,8 @@ app.use(cors())
 app.use(express.json())
 
 app.use(authRouter)
-app.use(statmentsRouter)
-app.get("/", (req,res) => {
+app.use(statementsRouter)
+app.get("/", (req, res) => {
     res.send("Online")
 })
 

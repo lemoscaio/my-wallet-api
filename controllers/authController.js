@@ -19,8 +19,8 @@ export async function registerUser(req, res) {
                 .send("This email has already been registered")
     } catch (error) {}
 
-    const passwordStrenght = passwordStrength(password).value
-    if (passwordStrenght === "Too weak" || passwordStrenght === "Weak") {
+    const passwordStrength = passwordStrength(password).value
+    if (passwordStrength === "Too weak" || passwordStrength === "Weak") {
         res.status(406).send(
             "The password must be stronger. Try to use capital letters, numbers and/or special characters."
         )
